@@ -1,0 +1,985 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MEMO</title>
+    <link rel="stylesheet" href="index.css" />
+    <style>
+      body { margin: 0; padding: 0; }
+      .toggle-sidebar-btn {
+        position: fixed;
+        left: 0;
+        top: 16px;
+        width: 44px;
+        height: 44px;
+        background: #666;
+        color: white;
+        border: none;
+        border-radius: 0 6px 6px 0;
+        cursor: pointer;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        transition: left 0.2s;
+      }
+      .app-container {
+        display: flex;
+        height: 100vh;
+        background: white;
+        margin-left: 0;
+        transition: margin-left 0.2s;
+      }
+      .app-container.sidebar-collapsed {
+        margin-left: 44px;
+      }
+      .sidebar {
+        width: 280px;
+        background: #f9f9f9;
+        border-right: 1px solid #e5e5e5;
+        padding: 16px;
+        overflow: visible;
+        transition: width 0.2s;
+        min-width: 0;
+        position: relative;
+      }
+      .sidebar.collapsed {
+        display: none;
+      }
+      .sidebar h1 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+      }
+      .btn-icon {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        min-width: 36px;
+        min-height: 36px;
+      }
+      .btn-icon:hover { background: #1d4ed8; }
+      .sidebar.collapsed .btn-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+      }
+      .resizer {
+        width: 4px;
+        height: 100%;
+        background: transparent;
+        cursor: col-resize;
+        user-select: none;
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+      .resizer:hover {
+        background: #2563eb;
+      }
+      .editor {
+        flex: 1;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .editor input {
+        font-size: 24px;
+        border: none;
+        border-bottom: 1px solid #e5e5e5;
+        padding: 8px 0;
+        margin-bottom: 24px;
+        outline: none;
+      }
+      .editor-area {
+        flex: 1;
+        display: flex;
+        gap: 0;
+        min-height: 0;
+      }
+      .editor-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        line-height: 1.6;
+        font-family: monospace;
+        resize: none;
+        padding-right: 12px;
+        border-right: 1px solid #e5e5e5;
+      }
+      .editor-preview {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        line-height: 1.6;
+        overflow-y: auto;
+        padding-left: 24px;
+        padding-right: 24px;
+        color: #333;
+      }
+      .editor-preview strong { font-weight: bold; }
+      .editor-preview del { text-decoration: line-through; }
+      .editor-preview code {
+        background: #f5f5f5;
+        color: #d63384;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      .format-toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+      #content code {
+        background: #f5f5f5;
+        color: #d63384;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      #content strong {
+        font-weight: bold;
+      }
+      #content del {
+        text-decoration: line-through;
+      }
+      #noteList {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0 !important;
+        width: 100%;
+      }
+      .note-menu {
+        position: relative;
+      }
+      .note-menu-btn {
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .note-menu-btn:hover {
+        color: #666;
+      }
+      .note-menu-popup {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border: 1px solid #e5e5e5;
+        border-radius: 6px;
+        padding: 4px 0;
+        z-index: 10;
+        min-width: 80px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      .note-menu-item {
+        padding: 8px 12px;
+        color: #d32f2f;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .note-menu-item:hover {
+        background: #fff3e0;
+      }
+      .header-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .search-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e5e5;
+        border-radius: 6px;
+        font-size: 13px;
+        outline: none;
+        background: white;
+      }
+      .search-input:focus {
+        border-color: #2563eb;
+      }
+      .list-empty {
+        color: #999;
+        font-size: 13px;
+        padding: 12px 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <button class="toggle-sidebar-btn" onclick="toggleSidebar()" id="toggleBtn" title="목록 접기/펼치기">&lt;</button>
+    <div id="root" class="app-container">
+      <div id="sidebar" class="sidebar">
+        <div class="header-row">
+          <div style="display: flex; gap: 8px; margin-left: auto;">
+            <button class="btn-icon" onclick="addNote()" title="새 메모">+</button>
+            <button class="btn-icon" style="background: #10b981;" onclick="openNewWindow()" title="새 창">⧉</button>
+            <button class="btn-icon webonly" style="background: #64748b; display: none;" onclick="exportNotes()" title="내보내기 — 메모 전체를 파일로 저장">↓</button>
+            <button class="btn-icon webonly" style="background: #64748b; display: none;" onclick="importNotes()" title="가져오기 — 저장해둔 파일 불러오기">↑</button>
+            <input id="importFile" type="file" accept="application/json,.json" style="display: none;" onchange="handleImportFile(event)">
+          </div>
+        </div>
+        <input id="search" class="search-input" type="text" placeholder="메모 검색…" oninput="onSearchInput()">
+        <div id="noteList"></div>
+        <div class="resizer" onmousedown="startResize(event)"></div>
+      </div>
+      <div class="editor">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
+          <button onclick="toggleShortcutHelp()" style="background: none; border: 1px solid #ddd; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 12px; color: #666;">?</button>
+        </div>
+        <input id="title" type="text" placeholder="제목" oninput="scheduleSave()" onblur="flushSave()">
+        <div id="shortcutHelp" style="display: none; font-size: 12px; color: #999; margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid #666;">
+          Cmd+B (굵게) | Cmd+U (취소선) | Cmd+E (코드) | Cmd+Z (되돌리기) | Cmd+Shift+Z (다시하기)
+        </div>
+        <div id="content" class="editor-input" contenteditable="true" placeholder="메모 입력..." onkeydown="handleKeydown(event)" oninput="onContentInput()" onblur="flushSave()" style="flex: 1; border: none; outline: none; font-size: 14px; line-height: 1.6; font-family: monospace; resize: none; white-space: pre-wrap; word-wrap: break-word; padding: 0; background: white; overflow-y: auto; min-height: 0;"></div>
+      </div>
+    </div>
+
+    <script>
+      // 웹 브라우저로 열었을 때(맥 앱이 아닐 때)는 브라우저 저장소를 대신 쓴다.
+      // 맥 앱에서는 preload.js가 window.electronAPI를 먼저 넣어주므로 이 블록은 건너뛴다.
+      if (!window.electronAPI) {
+        const WEB_KEY = 'memo-notes';
+        window.electronAPI = {
+          loadNotes: async () => {
+            try { return JSON.parse(localStorage.getItem(WEB_KEY) || '[]'); }
+            catch (e) { return []; }
+          },
+          saveNotes: async (notes) => {
+            try {
+              localStorage.setItem(WEB_KEY, JSON.stringify(notes));
+              return true;
+            } catch (e) {
+              alert('저장 공간이 가득 차서 저장하지 못했습니다. 오래된 메모를 지우거나 내보내기로 백업해 주세요.');
+              return false;
+            }
+          },
+          openNewWindow: async () => { window.open(location.href, '_blank'); return true; },
+          // 다른 탭에서 바꾸면 storage 이벤트가 온다 (바꾼 탭 자신에게는 오지 않음)
+          onNotesUpdated: (callback) => {
+            window.addEventListener('storage', (e) => {
+              if (e.key !== WEB_KEY) return;
+              try { callback(JSON.parse(e.newValue || '[]')); } catch (err) {}
+            });
+          },
+        };
+        window.IS_WEB = true;
+      }
+
+      let notes = [];
+      let currentNoteId = null;
+      let editorNoteId = null; // 편집기에 실제로 올라와 있는 메모 id
+      let searchQuery = '';
+      let isResizing = false;
+      const MIN_WIDTH = 100;
+      const MAX_WIDTH = 600;
+
+      async function init() {
+        notes = await window.electronAPI.loadNotes();
+        currentNoteId = notes.length > 0 ? notes[0].id : null;
+        render();
+        loadSidebarState();
+
+        // contenteditable의 자동 포맷팅 비활성화
+        const content = document.getElementById('content');
+        content.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const text = e.clipboardData.getData('text/plain');
+          document.execCommand('insertText', false, text);
+          setTimeout(() => { pushHistory(); scheduleSave(); }, 10);
+        });
+
+        // 창을 닫거나 새로고침하기 전에 저장 대기분 비우기
+        window.addEventListener('beforeunload', () => { flushSave(); });
+
+        // 웹에서는 메모가 브라우저에만 있으므로 내보내기·가져오기 버튼을 보여준다
+        if (window.IS_WEB) {
+          document.querySelectorAll('.webonly').forEach(el => { el.style.display = 'flex'; });
+        }
+
+        // 메뉴 외부 클릭 시 메뉴 닫기
+        document.addEventListener('click', () => {
+          document.querySelectorAll('.note-menu-popup').forEach(m => {
+            m.style.display = 'none';
+          });
+        });
+      }
+
+      function startResize(e) {
+        isResizing = true;
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+      }
+
+      function doResize(e) {
+        if (!isResizing) return;
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('collapsed')) return;
+
+        const newWidth = e.clientX;
+        if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+          sidebar.style.width = newWidth + 'px';
+        }
+      }
+
+      function stopResize() {
+        isResizing = false;
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+        saveSidebarState();
+      }
+
+      function saveSidebarState() {
+        const sidebar = document.getElementById('sidebar');
+        const state = {
+          collapsed: sidebar.classList.contains('collapsed'),
+          width: sidebar.style.width || '280px'
+        };
+        localStorage.setItem('sidebarState', JSON.stringify(state));
+      }
+
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const appContainer = document.getElementById('root');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+
+        if (isCollapsed) {
+          // 펼치기
+          sidebar.classList.remove('collapsed');
+          appContainer.classList.remove('sidebar-collapsed');
+          toggleBtn.textContent = '<';
+        } else {
+          // 접기
+          sidebar.classList.add('collapsed');
+          appContainer.classList.add('sidebar-collapsed');
+          toggleBtn.textContent = '>';
+        }
+        saveSidebarState();
+      }
+
+      function loadSidebarState() {
+        const state = localStorage.getItem('sidebarState');
+        if (state) {
+          const { collapsed } = JSON.parse(state);
+          const sidebar = document.getElementById('sidebar');
+          const appContainer = document.getElementById('root');
+          const toggleBtn = document.getElementById('toggleBtn');
+
+          if (collapsed) {
+            sidebar.classList.add('collapsed');
+            appContainer.classList.add('sidebar-collapsed');
+            toggleBtn.textContent = '>';
+          }
+        }
+      }
+
+      async function saveNotes() {
+        await window.electronAPI.saveNotes(notes);
+      }
+
+      async function addNote() {
+        await flushSave(); // 쓰던 메모 먼저 저장
+        const note = {
+          id: Date.now().toString(),
+          title: '새 메모',
+          content: '',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          pinned: false
+        };
+        notes.unshift(note);
+        await saveNotes();
+        currentNoteId = note.id;
+        render();
+      }
+
+      function toggleNoteMenu(id, event) {
+        event.stopPropagation();
+        const menu = document.getElementById(`menu-${id}`);
+        const allMenus = document.querySelectorAll('.note-menu-popup');
+
+        allMenus.forEach(m => {
+          if (m !== menu) m.style.display = 'none';
+        });
+
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+      }
+
+      async function deleteNote(id) {
+        if (id === currentNoteId) {
+          cancelPendingSave(); // 지울 메모의 저장 대기분은 버린다
+        } else {
+          await flushSave();
+        }
+        notes = notes.filter(n => n.id !== id);
+        await saveNotes();
+        currentNoteId = notes.length > 0 ? notes[0].id : null;
+        render();
+      }
+
+      async function selectNote(id) {
+        await flushSave(); // 항상 먼저 저장
+
+        if (id === currentNoteId) return; // 같은 메모면 여기서만 반환 (렌더링 안함)
+
+        currentNoteId = id;
+        render();
+      }
+
+      function htmlToMarkdown(html) {
+        return html
+          .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+          .replace(/<b>(.*?)<\/b>/g, '**$1**')
+          .replace(/<del>(.*?)<\/del>/g, '~~$1~~')
+          .replace(/<s>(.*?)<\/s>/g, '~~$1~~')
+          .replace(/<pre>(.*?)<\/pre>/g, '`$1`')
+          .replace(/<code>(.*?)<\/code>/g, '`$1`')
+          .replace(/<br>/g, '\n')
+          .replace(/<[^>]*>/g, '');
+      }
+
+      function markdownToHtml(markdown) {
+        return markdown
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/~~(.*?)~~/g, '<del>$1</del>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+      }
+
+      // ===== 글에서 실행될 수 있는 것을 걸러낸다 =====
+      // 남기는 태그: 글자 모양에 쓰는 것만. 속성(onerror, src, style…)은 전부 떼어낸다.
+      const ALLOWED_TAGS = {
+        B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, STRIKE: 1, DEL: 1,
+        CODE: 1, PRE: 1, BR: 1, DIV: 1, P: 1, SPAN: 1,
+      };
+      // 안쪽 글까지 통째로 버릴 태그
+      const DROPPED_TAGS = {
+        SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, LINK: 1,
+        META: 1, NOSCRIPT: 1, TEMPLATE: 1, SVG: 1, MATH: 1,
+      };
+
+      function sanitizeHtml(html) {
+        // template 안에서는 이미지가 불러와지지도, 코드가 돌지도 않는다
+        const holder = document.createElement('template');
+        holder.innerHTML = String(html == null ? '' : html);
+        cleanNodes(holder.content);
+        return holder.innerHTML;
+      }
+
+      function cleanNodes(parent) {
+        let child = parent.firstChild;
+        while (child) {
+          const next = child.nextSibling;
+          if (child.nodeType === Node.TEXT_NODE) {
+            // 글자는 그대로 둔다
+          } else if (child.nodeType !== Node.ELEMENT_NODE) {
+            child.remove(); // 주석 등
+          } else if (DROPPED_TAGS[child.nodeName]) {
+            child.remove();
+          } else if (!ALLOWED_TAGS[child.nodeName]) {
+            cleanNodes(child);
+            unwrapNode(child); // 태그만 벗기고 안쪽 글은 살린다
+          } else {
+            while (child.attributes.length) {
+              child.removeAttribute(child.attributes[0].name);
+            }
+            cleanNodes(child);
+          }
+          child = next;
+        }
+      }
+
+      function unwrapNode(node) {
+        const parent = node.parentNode;
+        if (!parent) return;
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+      }
+
+      function getPlainText(html) {
+        // 반드시 template 을 쓴다. 보통 div 에 innerHTML 을 넣으면 화면에 붙지 않아도
+        // <img onerror="..."> 같은 코드가 그 자리에서 실행된다.
+        const holder = document.createElement('template');
+        // 줄바꿈을 띄어쓰기로 바꿔야 목록 미리보기에서 앞뒤 단어가 붙지 않는다
+        holder.innerHTML = String(html == null ? '' : html).replace(/<br\s*\/?>/gi, ' ');
+        return holder.content.textContent.replace(/\s+/g, ' ').trim();
+      }
+
+      function toggleShortcutHelp() {
+        const help = document.getElementById('shortcutHelp');
+        help.style.display = help.style.display === 'none' ? 'block' : 'none';
+      }
+
+      let saveTimer = null;
+
+      // 타이핑 중 0.4초마다 자동 저장
+      function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => { saveTimer = null; updateCurrentNote(); }, 400);
+      }
+
+      // 대기 중인 저장을 바로 실행 (포커스 이동·메모 전환·창 닫기 직전)
+      function flushSave() {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        return updateCurrentNote();
+      }
+
+      function cancelPendingSave() {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+
+      async function updateCurrentNote() {
+        const note = notes.find(n => n.id === currentNoteId);
+        if (!note) return;
+
+        // 편집기에 올라온 메모와 선택된 메모가 다르면 저장하지 않는다.
+        // (전환 도중 빈 편집기 내용이 멀쩡한 메모를 덮어쓰는 사고 방지)
+        if (editorNoteId !== currentNoteId) return;
+
+        const newContent = document.getElementById('content').innerHTML;
+        const newTitle = document.getElementById('title').value;
+
+        if (note.title === newTitle && note.content === newContent) return;
+
+        note.title = newTitle;
+        note.content = newContent;
+        note.updatedAt = Date.now();
+        await saveNotes();
+        renderList(); // 목록의 제목·미리보기만 갱신 (편집기는 건드리지 않음)
+      }
+
+      async function togglePin(noteId, event) {
+        event.stopPropagation();
+        const note = notes.find(n => n.id === noteId);
+        if (!note) return;
+
+        note.pinned = !note.pinned;
+        note.updatedAt = Date.now();
+        await saveNotes();
+        renderList();
+      }
+
+      let history = [];
+      let historyIndex = -1;
+      let historyTimer = null;
+
+      function formatBold() {
+        document.execCommand('bold', false, null);
+        setTimeout(() => { pushHistory(); scheduleSave(); }, 10);
+      }
+
+      function formatStrike() {
+        document.execCommand('strikethrough', false, null);
+        setTimeout(() => { pushHistory(); scheduleSave(); }, 10);
+      }
+
+      function formatCode() {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        const selectedText = range.toString();
+
+        if (!selectedText) return;
+
+        // 선택한 텍스트의 부모 확인
+        let node = range.startContainer;
+        let codeElement = null;
+
+        if (node.nodeType === Node.TEXT_NODE && node.parentElement.tagName === 'CODE') {
+          codeElement = node.parentElement;
+        }
+
+        if (codeElement) {
+          // <code> 태그 제거 (텍스트만 남기기)
+          const text = document.createTextNode(codeElement.textContent);
+          codeElement.replaceWith(text);
+
+          selection.removeAllRanges();
+          const newRange = document.createRange();
+          newRange.setStart(text, 0);
+          newRange.setEnd(text, selectedText.length);
+          selection.addRange(newRange);
+        } else {
+          // <code> 태그로 감싸기
+          const code = document.createElement('code');
+          code.textContent = selectedText;
+          range.deleteContents();
+          range.insertNode(code);
+
+          selection.removeAllRanges();
+          const newRange = document.createRange();
+          newRange.setStartAfter(code);
+          newRange.collapse(true);
+          selection.addRange(newRange);
+        }
+
+        setTimeout(() => { pushHistory(); scheduleSave(); }, 10);
+      }
+
+      function handleKeydown(e) {
+        if (e.metaKey || e.ctrlKey) {
+          if (e.key === 'b' || e.key === 'B') {
+            e.preventDefault();
+            document.getElementById('content').focus();
+            formatBold();
+          } else if (e.key === 'u' || e.key === 'U') {
+            e.preventDefault();
+            document.getElementById('content').focus();
+            formatStrike();
+          } else if (e.key === 'e' || e.key === 'E') {
+            e.preventDefault();
+            document.getElementById('content').focus();
+            formatCode();
+          } else if (e.key === 'z' || e.key === 'Z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const selection = window.getSelection();
+          if (selection.rangeCount === 0) return;
+
+          const range = selection.getRangeAt(0);
+          const br = document.createElement('br');
+          range.insertNode(br);
+
+          // 커서를 <br> 다음으로 이동
+          range.setStartAfter(br);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          setTimeout(() => { pushHistory(); scheduleSave(); }, 10);
+        }
+      }
+
+      // 글자를 입력할 때마다 호출: 되돌리기 기록 + 자동 저장
+      function onContentInput() {
+        clearTimeout(historyTimer);
+        historyTimer = setTimeout(() => { historyTimer = null; pushHistory(); }, 400);
+        scheduleSave();
+      }
+
+      // 메모를 새로 열 때 되돌리기 기록을 초기화 (다른 메모 내용으로 되돌아가는 것 방지)
+      function resetHistory() {
+        clearTimeout(historyTimer);
+        historyTimer = null;
+        history = [{ html: document.getElementById('content').innerHTML, caret: null }];
+        historyIndex = 0;
+      }
+
+      function pushHistory() {
+        clearTimeout(historyTimer);
+        historyTimer = null;
+
+        const html = document.getElementById('content').innerHTML;
+        const caret = getCaretOffset();
+
+        // 내용이 그대로면 커서 위치만 갱신
+        if (history[historyIndex] && history[historyIndex].html === html) {
+          history[historyIndex].caret = caret;
+          return;
+        }
+
+        history = history.slice(0, historyIndex + 1);
+        history.push({ html, caret });
+        if (history.length > 200) history.shift();
+        historyIndex = history.length - 1;
+      }
+
+      function applyHistory() {
+        const entry = history[historyIndex];
+        document.getElementById('content').innerHTML = entry.html;
+        setCaretOffset(entry.caret);
+        scheduleSave();
+      }
+
+      function undo() {
+        if (historyTimer) pushHistory(); // 방금 친 글자부터 기록에 넣고 되돌린다
+        if (historyIndex <= 0) return;
+        historyIndex--;
+        applyHistory();
+      }
+
+      function redo() {
+        if (historyTimer) pushHistory();
+        if (historyIndex >= history.length - 1) return;
+        historyIndex++;
+        applyHistory();
+      }
+
+      // 편집기 안에서 커서가 몇 번째 글자에 있는지 (줄바꿈 <br>은 1글자로 셈)
+      function getCaretOffset() {
+        const root = document.getElementById('content');
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return null;
+
+        const range = sel.getRangeAt(0);
+        if (!root.contains(range.endContainer)) return null;
+
+        const pre = range.cloneRange();
+        pre.selectNodeContents(root);
+        pre.setEnd(range.endContainer, range.endOffset);
+        return measureLength(pre.cloneContents());
+      }
+
+      function measureLength(node) {
+        let len = 0;
+        node.childNodes.forEach(child => {
+          if (child.nodeType === Node.TEXT_NODE) len += child.textContent.length;
+          else if (child.nodeName === 'BR') len += 1;
+          else len += measureLength(child);
+        });
+        return len;
+      }
+
+      function setCaretOffset(offset) {
+        if (offset === null || offset === undefined) return;
+
+        const root = document.getElementById('content');
+        const sel = window.getSelection();
+        let remaining = offset;
+        let placed = false;
+
+        function place(setup) {
+          const range = document.createRange();
+          setup(range);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          placed = true;
+        }
+
+        function walk(node) {
+          for (const child of Array.from(node.childNodes)) {
+            if (placed) return;
+            if (child.nodeType === Node.TEXT_NODE) {
+              if (remaining <= child.textContent.length) {
+                place(r => r.setStart(child, remaining));
+                return;
+              }
+              remaining -= child.textContent.length;
+            } else if (child.nodeName === 'BR') {
+              if (remaining <= 0) {
+                place(r => r.setStartBefore(child));
+                return;
+              }
+              remaining -= 1;
+            } else {
+              walk(child);
+            }
+          }
+        }
+
+        walk(root);
+        if (!placed) {
+          place(r => { r.selectNodeContents(root); r.collapse(false); });
+        }
+        root.focus();
+      }
+
+      function render() {
+        renderList();
+        renderEditor();
+      }
+
+      function escapeHtml(text) {
+        return String(text == null ? '' : text).replace(/[&<>"']/g, c => (
+          { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+        ));
+      }
+
+      function onSearchInput() {
+        searchQuery = document.getElementById('search').value.trim().toLowerCase();
+        renderList();
+      }
+
+      function matchesSearch(note) {
+        if (!searchQuery) return true;
+        return (note.title || '').toLowerCase().includes(searchQuery)
+          || getPlainText(note.content || '').toLowerCase().includes(searchQuery);
+      }
+
+      function renderList() {
+        const noteList = document.getElementById('noteList');
+        noteList.style.display = 'flex';
+        noteList.style.flexDirection = 'column';
+        noteList.style.gap = '0';
+
+        // pinned 메모를 상단으로 정렬
+        const sortedNotes = notes.filter(matchesSearch).sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return 0;
+        });
+
+        if (sortedNotes.length === 0) {
+          noteList.innerHTML = searchQuery
+            ? '<div class="list-empty">검색 결과가 없습니다</div>'
+            : '<div class="list-empty">메모가 없습니다</div>';
+          return;
+        }
+
+        noteList.innerHTML = sortedNotes.map(note => `
+          <div style="padding: 12px; border-radius: 8px; cursor: pointer; background: ${currentNoteId === note.id ? '#e3f2fd' : 'transparent'}; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; width: 100%; box-sizing: border-box;"
+               onclick="(async () => { await selectNote('${note.id}') })()">
+            <div style="flex: 1; min-width: 0; overflow: hidden;">
+              <div style="font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(note.title) || '제목 없음'}</div>
+              <div style="font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(getPlainText(note.content).slice(0, 30)) || '(내용 없음)'}</div>
+            </div>
+            <div class="note-menu" onclick="event.stopPropagation()" style="display: flex; gap: 4px; align-items: center;">
+              <button class="note-menu-btn" onclick="togglePin('${note.id}', event)" style="background: none; border: none; color: #999; cursor: pointer; font-size: 16px; padding: 0; width: auto;">${note.pinned ? '★' : '☆'}</button>
+              <button class="note-menu-btn" onclick="toggleNoteMenu('${note.id}', event)">⋮</button>
+              <div id="menu-${note.id}" class="note-menu-popup" style="display: none;">
+                <div class="note-menu-item" onclick="deleteNote('${note.id}')">삭제</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function renderEditor() {
+        const currentNote = notes.find(n => n.id === currentNoteId);
+        if (currentNote) {
+          document.getElementById('title').value = currentNote.title || '';
+          const raw = currentNote.content || '';
+          document.getElementById('content').innerHTML =
+            sanitizeHtml(raw.includes('<') ? raw : markdownToHtml(raw));
+        } else {
+          document.getElementById('title').value = '';
+          document.getElementById('content').innerHTML = '';
+        }
+        editorNoteId = currentNoteId;
+        resetHistory();
+      }
+
+      async function openNewWindow() {
+        await window.electronAPI.openNewWindow();
+      }
+
+      // ===== 내보내기 / 가져오기 (웹 전용) =====
+      async function exportNotes() {
+        await flushSave();
+        const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const blob = new Blob([JSON.stringify(notes, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `memo-backup-${stamp}.json`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function importNotes() {
+        document.getElementById('importFile').click();
+      }
+
+      async function handleImportFile(event) {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = ''; // 같은 파일을 다시 골라도 동작하도록 초기화
+        if (!file) return;
+
+        let incoming;
+        try {
+          incoming = JSON.parse(await file.text());
+        } catch (e) {
+          alert('메모 파일을 읽지 못했습니다. 내보내기로 저장한 .json 파일인지 확인해 주세요.');
+          return;
+        }
+        if (!Array.isArray(incoming)) {
+          alert('메모 파일 형식이 아닙니다.');
+          return;
+        }
+
+        // 남이 만든 파일이므로, 안에 심어둔 코드가 있으면 여기서 떼어낸다
+        const valid = incoming
+          .filter(n => n && typeof n === 'object' && n.id)
+          .map(n => Object.assign({}, n, {
+            title: getPlainText(n.title || ''),
+            content: sanitizeHtml(n.content || ''),
+          }));
+        if (valid.length === 0) {
+          alert('불러올 메모가 없습니다.');
+          return;
+        }
+        if (!confirm(`메모 ${valid.length}개를 지금 목록에 합칩니다.\n같은 메모는 더 나중에 고친 쪽만 남습니다. 계속할까요?`)) return;
+
+        await flushSave();
+
+        // id가 같으면 updatedAt이 더 최신인 쪽을 남긴다
+        const merged = new Map(notes.map(n => [n.id, n]));
+        valid.forEach(n => {
+          const old = merged.get(n.id);
+          if (!old || (n.updatedAt || 0) > (old.updatedAt || 0)) merged.set(n.id, n);
+        });
+        notes = Array.from(merged.values());
+
+        await saveNotes();
+        if (!notes.find(n => n.id === currentNoteId)) {
+          currentNoteId = notes.length > 0 ? notes[0].id : null;
+        }
+        render();
+      }
+
+      // 다른 창에서 메모를 수정했을 때 실시간 동기화
+      window.electronAPI.onNotesUpdated((updatedNotes) => {
+        notes = updatedNotes;
+
+        // 보고 있던 메모가 다른 창에서 지워졌으면 전체 다시 그리기
+        if (!notes.find(n => n.id === currentNoteId)) {
+          currentNoteId = notes.length > 0 ? notes[0].id : null;
+          render();
+          return;
+        }
+
+        renderList();
+
+        // 편집 중이 아닐 때만 본문을 갈아끼운다 (쓰던 글 날아가는 것 방지)
+        const editing = document.activeElement === document.getElementById('content')
+          || document.activeElement === document.getElementById('title');
+        if (!editing && !saveTimer) renderEditor();
+      });
+
+      init();
+      console.log('Notes app loaded successfully');
+    </script>
+    <!-- 의견 보내기 위젯 (웹에서만 뜬다. 맥 앱에서는 스스로 빠진다) -->
+    <script src="feedback.js" defer></script>
+  </body>
+</html>
